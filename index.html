@@ -18,6 +18,7 @@
     let arrows = [];
     let marioArrows = [];
     let npcArrows = [];
+    let gameOver = false;
 
     function preload() {
       bgImg = loadImage('background.png');
@@ -129,16 +130,16 @@
           this.fireArrow();
         }
 
-
         // Update arrows fired by Mario
         for (let i = this.arrows.length - 1; i >= 0; i--) {
           this.arrows[i].update();
           this.arrows[i].show();
           if (this.arrows[i].offscreen()) {
             this.arrows.splice(i, 1);
-          } else if (this.arrows[i].hits(npc)) {
-            npc.takeDamage(5); // Remove 5% of total NPC HP
-            this.arrows.splice(i, 1);
+          } else if (arrow.source === "mario" && arrow.hits(npc)) {
+            npc.takeDamage(2.5); // Remove 2.5% of total HP
+            npcHealthMeter.update(npc.health); // Update NPC's health meter
+            marioArrows.push(arrows.splice(i, 1)[0]);
           }
         }
 
@@ -173,10 +174,6 @@
         this.healthMeter.show();
       }
 
-      shoot() {
-        arrows.push(new Arrow(this.x + 20, this.y - 5, createVector(npc.x, npc.y)));
-      }
-
       jump() {
         if (this.jumps < 2) { // Allow up to two jumps
           this.velocity += this.lift;
@@ -187,7 +184,7 @@
       fireArrow() {
         if (this.canShoot) {
           if (this.arrows.length < 2) { // Limit of 3 arrows on screen at once
-            this.shoot();
+            arrows.push(new Arrow(this.x + 20, this.y - 5, createVector(npc.x, npc.y), 'mario'));
           }
         }
       }
@@ -195,19 +192,17 @@
       takeDamage(damage) {
         this.health -= this.health * (damage / 100);
       }
-
     }
-
 
     class NPC {
       constructor() {
-        this.x = width - 50;
+        this.x = width - random(50, 200);
         this.y = height - height / 6;
         this.img = loadImage('npc.png');
         this.lastShot = 0;
         this.shotInterval = random(250, 1500); // Random shot interval
         this.health = 100;
-            this.healthMeter = new HealthMeter(this, 40); // Pass in yOffset of 40
+        this.healthMeter = new HealthMeter(this, 40); // Pass in yOffset of 40
         this.arrows = []; // Array to hold NPC's arrows
       }
 
@@ -217,17 +212,26 @@
         if (now - this.lastShot > this.shotInterval) {
           this.shotInterval = random(250, 1500); // Random shot interval
           this.lastShot = now;
-          this.arrows.push(new Arrow(this.x, this.y, createVector(mario.x, mario.y), this.arrows));
+          this.arrows.push(new Arrow(this.x, this.y, createVector(mario.x, mario.y), 'npc'));
         }
 
-        // Update NPC's arrows
+        // Update arrows fired by NPC
         for (let i = this.arrows.length - 1; i >= 0; i--) {
           this.arrows[i].update();
+          this.arrows[i].show();
           if (this.arrows[i].offscreen()) {
             this.arrows.splice(i, 1);
           } else if (this.arrows[i].hits(mario)) {
-            mario.takeDamage(2.5); // Remove 2.5% of total HP
+            mario.takeDamage(5); // Remove 5% of total Mario HP
             this.arrows.splice(i, 1);
+          }
+        }
+
+        // Check for collision with arrows fired by Mario
+        for (let i = mario.arrows.length - 1; i >= 0; i--) {
+          if (mario.arrows[i].hits(this)) {
+            this.takeDamage(5); // Remove 5% of total NPC HP
+            mario.arrows.splice(i, 1);
           }
         }
 
@@ -249,6 +253,7 @@
 
       takeDamage(damage) {
         this.health -= this.health * (damage / 100);
+        console.log(this.health, 'NPC');
       }
     }
 
@@ -342,32 +347,43 @@
       }
 
       hits(target) {
-        // Calculate bounding box of arrow
-        let arrowLeft = this.pos.x - this.width / 2;
-        let arrowRight = this.pos.x + this.width / 2;
-        let arrowTop = this.pos.y - this.height / 2;
-        let arrowBottom = this.pos.y + this.height / 2;
-
-        // Calculate bounding box of target
-        let targetLeft = target.x - 25;
-        let targetRight = target.x + 25;
-        let targetTop = target.y - 25;
-        let targetBottom = target.y + 25;
-
-        // Check for overlap
-        if (arrowLeft < targetRight && arrowRight > targetLeft &&
-          arrowTop < targetBottom && arrowBottom > targetTop) {
-          return true;
-        } else {
-          return false;
+        if (target instanceof NPC || target instanceof Mario) {
+          let targetLeft = target.x - 25;
+          let targetRight = target.x + 25;
+          let targetTop = target.y - 25;
+          let targetBottom = target.y + 25;
+          if (this.pos.x > targetLeft && this.pos.x < targetRight &&
+            this.pos.y > targetTop && this.pos.y < targetBottom) {
+            if (this.source === "mario") {
+              console.log(target);
+              npc.takeDamage(2.5); // Remove 2.5% of total HP
+              npcHealthMeter.update(npc.health); // Update NPC's health meter
+              npcArrows.push(this);
+            } else if (this.source === "npc") {
+              mario.takeDamage(5); // Remove 5% of total Mario HP
+              marioHealthMeter.update(mario.health); // Update Mario's health meter
+              marioArrows.push(this);
+            }
+            if (gameOver === false) {
+              if (mario.health < 1) {
+                gameOver = true;
+                alert("NPC wins!");
+              }
+              if (npc.health < 1) {
+                gameOver = true;
+                alert("Mario wins!");
+              }
+            }
+            return true;
+          }
         }
+        return false;
       }
 
       offscreen() {
         return (this.pos.x < 0 || this.pos.x > width || this.pos.y < 0 || this.pos.y > height);
       }
     }
-
 
     function keyPressed() {
       if (keyCode === UP_ARROW) {
