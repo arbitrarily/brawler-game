@@ -6,7 +6,8 @@
 </head>
 
 <body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.14/p5.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
   <script>
     let mario;
     let bottomFrontImg;
@@ -22,7 +23,12 @@
     let marioArrows = [];
     let npcArrows = [];
     let gameOver = false;
-
+    let bowSound;
+    let bowHitSound;
+    let winSound;
+    let damageTakenSound;
+    let deadSound;
+    let song;
     let myFont;
     let winner = false;
 
@@ -32,6 +38,12 @@
       bottomFrontImg = loadImage('foreground.png');
       winImg = loadImage('win.png');
       lossImg = loadImage('loss.png');
+      bowSound = loadSound('arrow.mp3');
+      bowHitSound = loadSound('bowHit.mp3');
+      deadSound = loadSound('dead.mp3');
+      winSound = loadSound('victory.mp3');
+      damageTakenSound = loadSound('damageTaken.mp3');
+      song = loadSound('song.mp3');
     }
 
     function setup() {
@@ -42,7 +54,15 @@
       npcHealthMeter = new HealthMeter(npc, 40); // Create NPC's health meter object
       // colorMode(HSB, 360, 100, 100, 1);
       textFont(myFont);
-      textSize(64);
+      textSize(96);
+      bowSound.setVolume(0.2);
+      bowHitSound.setVolume(0.2);
+      deadSound.setVolume(0.15);
+      winSound.setVolume(0.5);
+      damageTakenSound.setVolume(0.15);
+      song.setVolume(0.1);
+      song.jump(60);
+      song.play();
     }
 
     function draw() {
@@ -112,7 +132,7 @@
         this.lift = -20;
         this.velocity = 0;
         this.speed = 5;
-        this.img = loadImage('character.png');
+        this.img = loadImage('char.png');
         this.jumps = 0;
         this.direction = 1;
         this.health = 100;
@@ -211,6 +231,7 @@
       fireArrow() {
         if (this.canShoot) {
           if (this.arrows.length < 2) { // Limit of 3 arrows on screen at once
+            bowSound.play();
             arrows.push(new Arrow(this.x + 20, this.y - 5, createVector(npc.x, npc.y), 'mario'));
             this.lastShot = millis();
           }
@@ -228,10 +249,15 @@
         this.y = height - height / 6;
         this.img = loadImage('npc2.png');
         this.lastShot = 0;
-        this.shotInterval = random(250, 1500); // Random shot interval
+        this.shotInterval = 0;
+        this.lastMovement = random(250, 1500);
+        this.movementInterval = random(250, 1500);
         this.health = 100;
         this.healthMeter = new HealthMeter(this, 40); // Pass in yOffset of 40
         this.arrows = []; // Array to hold NPC's arrows
+        this.lerpAmt = 0.003; // Set the amount to interpolate by
+        this.jumpInterval = 500; // Set jump interval to 500ms
+        this.jumpTimer = 0; // Initialize jump timer
       }
 
       update() {
@@ -239,8 +265,33 @@
         let now = millis();
         if (now - this.lastShot > this.shotInterval) {
           this.shotInterval = random(250, 1500); // Random shot interval
-          this.lastShot = now;
-          this.arrows.push(new Arrow(this.x, this.y, createVector(mario.x, mario.y), 'npc'));
+          this.fireArrow();
+        }
+
+        this.x = lerp(this.x, mario.x, this.lerpAmt);
+        this.y = lerp(this.y, mario.y, this.lerpAmt);
+
+        if (now - this.lastMovement > this.movementInterval) {
+          // Interpolate between current position and target position
+          this.movementInterval = random(250, 1500); // Random shot interval
+          this.lastMovement = now;
+          // Move NPC randomly
+        }
+
+        // Prevent NPC from going off the left or right edge of the screen
+        if (this.x < 10) {
+          this.x = 10;
+        }
+        if (this.x > width - 60) {
+          this.x = width - 60;
+        }
+
+        // Prevent NPC from going off the top or bottom edge of the screen
+        if (this.y < 100) {
+          this.y = 100;
+        }
+        if (this.y > height - height / 6) {
+          this.y = height - height / 6;
         }
 
         // Update arrows fired by NPC
@@ -279,9 +330,26 @@
         }
       }
 
+      setTargetPosition() {
+        // Set new target position for NPC
+        this.targetX = random(10, width - 60);
+        this.targetY = random(10, height - height / 6);
+      }
+
+      fireArrow() {
+        if (this.arrows.length < 3) { // Limit of 3 arrows on screen at once
+          this.arrows.push(new Arrow(this.x, this.y, createVector(mario.x, mario.y), 'npc'));
+          this.lastShot = millis();
+        }
+      }
+
+      jump() {
+        this.velocity = -50;
+        this.jumpTimer = 0;
+      }
+
       takeDamage(damage) {
         this.health -= this.health * (damage / 100);
-        console.log(this.health, 'NPC');
       }
     }
 
@@ -311,7 +379,6 @@
           }
 
           // Calculate position of health bar
-          console.log(this.character);
           let xPos = this.character.x - 5;
           let yPos = this.character.y - this.yOffset;
 
@@ -392,23 +459,27 @@
           if (this.pos.x > targetLeft && this.pos.x < targetRight &&
             this.pos.y > targetTop && this.pos.y < targetBottom) {
             if (this.source === "mario") {
-              console.log(target);
               npc.takeDamage(2.5); // Remove 2.5% of total HP
               npcHealthMeter.update(npc.health); // Update NPC's health meter
               npcArrows.push(this);
+              bowHitSound.play();
             } else if (this.source === "npc") {
               mario.takeDamage(5); // Remove 5% of total Mario HP
               marioHealthMeter.update(mario.health); // Update Mario's health meter
               marioArrows.push(this);
+              damageTakenSound.play();
             }
             if (gameOver === false) {
               if (mario.health < 1) {
                 gameOver = !gameOver;
                 winner = 'NPC'
+                deadSound.play();
               }
               if (npc.health < 1) {
                 gameOver = !gameOver;
                 winner = 'Mario'
+                song.stop();
+                winSound.play();
               }
             }
             return true;
