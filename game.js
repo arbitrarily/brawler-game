@@ -25,16 +25,16 @@
 
     function preload() {
       bgImg = loadImage(`background-${Math.floor(Math.random() * 3) + 1}.png`);
-      myFont = loadFont('https://g.marko.tech/font.ttf');
-      bottomFrontImg = loadImage('https://g.marko.tech/foreground.png');
-      winImg = loadImage('https://g.marko.tech/win.png');
-      lossImg = loadImage('https://g.marko.tech/loss.png');
-      bowSound = loadSound('https://g.marko.tech/arrow.mp3');
-      bowHitSound = loadSound('https://g.marko.tech/bowHit.mp3');
-      deadSound = loadSound('https://g.marko.tech/dead.mp3');
-      winSound = loadSound('https://g.marko.tech/victory.mp3');
-      damageTakenSound = loadSound('https://g.marko.tech/damageTaken.mp3');
-      song = loadSound('https://g.marko.tech/song.mp3');
+      myFont = loadFont('font.ttf');
+      bottomFrontImg = loadImage('foreground.png');
+      winImg = loadImage('win.png');
+      lossImg = loadImage('loss.png');
+      bowSound = loadSound('arrow.mp3');
+      bowHitSound = loadSound('bowHit.mp3');
+      deadSound = loadSound('dead.mp3');
+      winSound = loadSound('victory.mp3');
+      damageTakenSound = loadSound('damageTaken.mp3');
+      song = loadSound('song.mp3');
     }
 
     function setup() {
@@ -128,7 +128,7 @@
         this.lift = -20;
         this.velocity = 0;
         this.speed = 6;
-        this.img = loadImage('https://g.marko.tech/char.png');
+        this.img = loadImage('char.png');
         this.jumps = 0;
         this.direction = 1;
         this.health = 100;
@@ -243,7 +243,7 @@
       constructor() {
         this.x = width - random(50, 200);
         this.y = height - height / 6;
-        this.img = loadImage('https://g.marko.tech/npc2.png');
+        this.img = loadImage('npc2.png');
         this.lastShot = 0;
         this.shotInterval = 0;
         this.lastMovement = random(250, 1500);
