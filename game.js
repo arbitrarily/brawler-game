@@ -1,5 +1,5 @@
     let mario;
-    let bottomFrontImg;
+    // let bottomFrontImg;
     let bgImg;
     let winImg;
     let lossImg;
@@ -26,7 +26,7 @@
     function preload() {
       bgImg = loadImage(`background-${Math.floor(Math.random() * 3) + 1}.png`);
       myFont = loadFont('font.ttf');
-      bottomFrontImg = loadImage('foreground.png');
+      // bottomFrontImg = loadImage('foreground.png');
       winImg = loadImage('win.png');
       lossImg = loadImage('loss.png');
       bowSound = loadSound('arrow.mp3');
@@ -50,6 +50,7 @@
       // colorMode(HSB, 360, 100, 100, 1);
       textFont(myFont);
       textSize(96);
+      background(0);
       bowSound.setVolume(0.2);
       bowHitSound.setVolume(0.2);
       deadSound.setVolume(0.15);
@@ -81,7 +82,7 @@
 
         // Draw repeating background with parallax
         for (let i = 0; i < 2; i++) { // Draw two instances of the background
-          image(bgImg, bgX + i * bgImg.width, bgY, bgImg.width, height);
+          image(bgImg, bgX + i * bgImg.width, bgY - 40, bgImg.width, height);
         }
 
         // Update and show health meters
@@ -116,7 +117,7 @@
             arrows[i] = arrow;
           }
         }
-        image(bottomFrontImg, -mario.x * 0.5, height - mario.y * 0.25, bottomFrontImg.width * 1.5, bottomFrontImg.height);
+        // image(bottomFrontImg, -mario.x * 0.5, height - mario.y * 0.25, bottomFrontImg.width * 1.25, bottomFrontImg.height);
       }
     }
 
